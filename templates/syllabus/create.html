@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Syllabus - MyZenBrain{% endblock %}
+
+{% block content %}
+<div class="fade-in" style="max-width: 800px; margin: 0 auto;">
+    <h1 class="mb-2">Upload Syllabus</h1>
+    <p class="text-muted mb-4">Upload a PDF, paste a URL, or enter text to generate quizzes and flashcards</p>
+
+    <!-- Step 1: Input Source -->
+    <div class="card mb-4" id="step-1">
+        <h2 class="mb-3">Step 1: Add Your Syllabus</h2>
+
+        <div class="form-group">
+            <label>Syllabus Name</label>
+            <input type="text" id="syllabus-name" class="form-control" placeholder="e.g., Biology 101, History Final">
+        </div>
+
+        <!-- Source Type Tabs -->
+        <div class="session-type-btns mb-3">
+            <button class="session-type-btn active" data-source="pdf">
+                <i class="fas fa-file-pdf"></i> PDF Upload
+            </button>
+            <button class="session-type-btn" data-source="url">
+                <i class="fas fa-link"></i> Website URL
+            </button>
+            <button class="session-type-btn" data-source="text">
+                <i class="fas fa-keyboard"></i> Paste Text
+            </button>
+        </div>
+
+        <!-- PDF Upload -->
+        <div id="source-pdf" class="source-input">
+            <div class="form-group">
+                <label>Upload PDF File</label>
+                <input type="file" id="pdf-file" class="form-control" accept=".pdf">
+            </div>
+        </div>
+
+        <!-- URL Input -->
+        <div id="source-url" class="source-input" style="display: none;">
+            <div class="form-group">
+                <label>Website URL</label>
+                <input type="url" id="url-input" class="form-control" placeholder="https://example.com/syllabus">
+                <small class="text-muted">Enter a course page, syllabus, or study guide URL</small>
+            </div>
+        </div>
+
+        <!-- Text Input -->
+        <div id="source-text" class="source-input" style="display: none;">
+            <div class="form-group">
+                <label>Paste Syllabus Text</label>
+                <textarea id="text-input" class="form-control" rows="10" placeholder="Paste your syllabus content here..."></textarea>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" id="parse-btn">
+            <i class="fas fa-search"></i>
+            Parse Content
+        </button>
+    </div>
+
+    <!-- Step 2: Preview & Generate -->
+    <div class="card mb-4" id="step-2" style="display: none;">
+        <h2 class="mb-3">Step 2: Preview & Generate</h2>
+
+        <div class="form-group">
+            <label>Extracted Content Preview</label>
+            <textarea id="content-preview" class="form-control" rows="8" readonly></textarea>
+            <small class="text-muted"><span id="content-length">0</span> characters extracted</small>
+        </div>
+
+        <div class="form-group">
+            <label>What to Generate?</label>
+            <div class="quiz-options" style="flex-direction: row; flex-wrap: wrap;">
+                <label class="quiz-option selected" style="flex: 1; min-width: 150px;">
+                    <input type="checkbox" name="generate" value="quizzes" checked>
+                    <span><i class="fas fa-question-circle"></i> Quizzes</span>
+                </label>
+                <label class="quiz-option selected" style="flex: 1; min-width: 150px;">
+                    <input type="checkbox" name="generate" value="flashcards" checked>
+                    <span><i class="fas fa-layer-group"></i> Flashcards</span>
+                </label>
+                <label class="quiz-option selected" style="flex: 1; min-width: 150px;">
+                    <input type="checkbox" name="generate" value="plan" checked>
+                    <span><i class="fas fa-calendar"></i> Study Plan</span>
+                </label>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" id="generate-btn" style="width: 100%;">
+            <i class="fas fa-magic"></i>
+            Generate with AI
+        </button>
+
+        <div id="loading" style="display: none; text-align: center; padding: 40px;">
+            <i class="fas fa-spinner fa-spin" style="font-size: 3rem; color: var(--primary);"></i>
+            <p class="mt-3">Generating content with AI... This may take a moment.</p>
+        </div>
+    </div>
+
+    <!-- Step 3: Results -->
+    <div class="card" id="step-3" style="display: none;">
+        <h2 class="mb-3"><i class="fas fa-check-circle" style="color: var(--success);"></i> Content Generated!</h2>
+
+        <div id="results-content"></div>
+
+        <div class="flex gap-2 mt-4">
+            <a href="{{ url_for('quiz.index') }}" class="btn btn-primary">
+                <i class="fas fa-question-circle"></i>
+                View Quizzes
+            </a>
+            <a href="{{ url_for('flashcard.index') }}" class="btn btn-secondary">
+                <i class="fas fa-layer-group"></i>
+                View Flashcards
+            </a>
+            <a href="{{ url_for('syllabus.index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i>
+                Back
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+.source-input { margin-bottom: 16px; }
+.quiz-option input[type="checkbox"] { margin-right: 8px; }
+</style>
+
+<script>
+let currentSource = 'pdf';
+let extractedContent = '';
+
+// Source type switching
+document.querySelectorAll('.session-type-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.session-type-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        currentSource = btn.dataset.source;
+        document.querySelectorAll('.source-input').forEach(el => el.style.display = 'none');
+        document.getElementById(`source-${currentSource}`).style.display = 'block';
+    });
+});
+
+// Checkbox styling
+document.querySelectorAll('.quiz-option input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', () => {
+        cb.closest('.quiz-option').classList.toggle('selected', cb.checked);
+    });
+});
+
+// Parse content
+document.getElementById('parse-btn').addEventListener('click', async () => {
+    const formData = new FormData();
+    formData.append('source_type', currentSource);
+
+    if (currentSource === 'pdf') {
+        const file = document.getElementById('pdf-file').files[0];
+        if (!file) {
+            alert('Please select a PDF file');
+            return;
+        }
+        formData.append('pdf_file', file);
+    } else if (currentSource === 'url') {
+        const url = document.getElementById('url-input').value;
+        if (!url) {
+            alert('Please enter a URL');
+            return;
+        }
+        formData.append('url', url);
+    } else {
+        const text = document.getElementById('text-input').value;
+        if (!text) {
+            alert('Please enter some text');
+            return;
+        }
+        formData.append('text_content', text);
+    }
+
+    const btn = document.getElementById('parse-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Parsing...';
+
+    try {
+        const res = await fetch('/syllabus/api/parse', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            extractedContent = data.content;
+            document.getElementById('content-preview').value = extractedContent.substring(0, 2000) + (extractedContent.length > 2000 ? '...' : '');
+            document.getElementById('content-length').textContent = data.length;
+            document.getElementById('step-2').style.display = 'block';
+            document.getElementById('step-2').scrollIntoView({ behavior: 'smooth' });
+        } else {
+            alert('Error: ' + (data.error || 'Failed to parse content'));
+        }
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-search"></i> Parse Content';
+});
+
+// Generate content
+document.getElementById('generate-btn').addEventListener('click', async () => {
+    const name = document.getElementById('syllabus-name').value || 'My Syllabus';
+
+    const checkboxes = document.querySelectorAll('input[name="generate"]:checked');
+    if (checkboxes.length === 0) {
+        alert('Please select at least one type of content to generate');
+        return;
+    }
+
+    document.getElementById('generate-btn').style.display = 'none';
+    document.getElementById('loading').style.display = 'block';
+
+    try {
+        const res = await fetch('/syllabus/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: name,
+                content: extractedContent,
+                type: 'all'
+            })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+            let html = '';
+
+            if (data.results.quizzes.length > 0) {
+                html += `<div class="mb-3">
+                    <h3><i class="fas fa-check" style="color: var(--success);"></i> Quiz Created</h3>
+                    <p class="text-muted">${data.results.quizzes[0].question_count} questions generated</p>
+                </div>`;
+            }
+
+            if (data.results.flashcards.length > 0) {
+                html += `<div class="mb-3">
+                    <h3><i class="fas fa-check" style="color: var(--success);"></i> Flashcard Deck Created</h3>
+                    <p class="text-muted">${data.results.flashcards[0].card_count} cards generated</p>
+                </div>`;
+            }
+
+            if (data.results.study_plan) {
+                const plan = data.results.study_plan;
+                html += `<div class="mb-3">
+                    <h3><i class="fas fa-check" style="color: var(--success);"></i> Study Plan Created</h3>
+                    <p class="text-muted">${plan.topics?.length || 0} topics, ~${plan.total_study_hours || 0} hours total</p>
+                </div>`;
+            }
+
+            document.getElementById('results-content').innerHTML = html;
+            document.getElementById('step-2').style.display = 'none';
+            document.getElementById('step-3').style.display = 'block';
+            document.getElementById('step-3').scrollIntoView({ behavior: 'smooth' });
+
+        } else {
+            alert('Error: ' + (data.error || 'Failed to generate content'));
+            document.getElementById('generate-btn').style.display = 'block';
+            document.getElementById('loading').style.display = 'none';
+        }
+    } catch (e) {
+        alert('Error: ' + e.message);
+        document.getElementById('generate-btn').style.display = 'block';
+        document.getElementById('loading').style.display = 'none';
+    }
+});
+</script>
+{% endblock %}

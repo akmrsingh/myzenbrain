@@ -18,12 +18,14 @@ def create_app():
     from routes.pomodoro import pomodoro_bp
     from routes.quiz import quiz_bp
     from routes.flashcard import flashcard_bp
+    from routes.syllabus import syllabus_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(pomodoro_bp, url_prefix='/pomodoro')
     app.register_blueprint(quiz_bp, url_prefix='/quiz')
     app.register_blueprint(flashcard_bp, url_prefix='/flashcard')
+    app.register_blueprint(syllabus_bp, url_prefix='/syllabus')
 
     return app
 

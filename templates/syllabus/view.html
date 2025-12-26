@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}{{ syllabus.name }} - MyZenBrain{% endblock %}
+
+{% block content %}
+<div class="fade-in" style="max-width: 900px; margin: 0 auto;">
+    <div class="flex flex-between mb-4">
+        <div>
+            <h1>{{ syllabus.name }}</h1>
+            <p class="text-muted">Created {{ syllabus.created_at }}</p>
+        </div>
+        <a href="{{ url_for('syllabus.index') }}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i>
+            Back
+        </a>
+    </div>
+
+    {% if study_plan %}
+    <div class="card mb-4">
+        <h2 class="mb-3"><i class="fas fa-calendar" style="color: var(--primary);"></i> Study Plan</h2>
+
+        <div class="grid grid-3 mb-4">
+            <div class="stat-card">
+                <div class="stat-value">{{ study_plan.topics|length if study_plan.topics else 0 }}</div>
+                <div class="stat-label">Topics</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ study_plan.total_study_hours or 0 }}</div>
+                <div class="stat-label">Est. Hours</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ study_plan.recommended_daily_pomodoros or 4 }}</div>
+                <div class="stat-label">Daily Pomodoros</div>
+            </div>
+        </div>
+
+        {% if study_plan.topics %}
+        <h3 class="mb-2">Topics to Study</h3>
+        <div class="item-list">
+            {% for topic in study_plan.topics %}
+            <div class="card mb-2" style="border-left: 4px solid {% if topic.priority == 'high' %}var(--error){% elif topic.priority == 'medium' %}var(--warning){% else %}var(--success){% endif %};">
+                <div class="flex flex-between">
+                    <div>
+                        <h4>{{ topic.name }}</h4>
+                        <p class="text-muted">{{ topic.description }}</p>
+                    </div>
+                    <div class="text-center">
+                        <span class="badge {% if topic.priority == 'high' %}badge-warning{% else %}badge-primary{% endif %}">
+                            {{ topic.estimated_pomodoros }} pomodoros
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <h2 class="mb-3"><i class="fas fa-file-alt"></i> Syllabus Content</h2>
+        <pre style="white-space: pre-wrap; font-family: inherit; background: #f9fafb; padding: 16px; border-radius: 8px; max-height: 400px; overflow-y: auto;">{{ syllabus.content }}</pre>
+    </div>
+
+    <div class="flex gap-2 mt-4">
+        <a href="{{ url_for('quiz.index') }}" class="btn btn-primary">
+            <i class="fas fa-question-circle"></i>
+            View Quizzes
+        </a>
+        <a href="{{ url_for('flashcard.index') }}" class="btn btn-secondary">
+            <i class="fas fa-layer-group"></i>
+            View Flashcards
+        </a>
+        <a href="{{ url_for('pomodoro.index') }}" class="btn btn-secondary">
+            <i class="fas fa-clock"></i>
+            Start Studying
+        </a>
+    </div>
+</div>
+{% endblock %}

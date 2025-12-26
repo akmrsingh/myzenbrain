@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Syllabus - MyZenBrain{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="flex flex-between mb-4">
+        <div>
+            <h1>Syllabus & AI Generation</h1>
+            <p class="text-muted">Upload a syllabus to auto-generate quizzes and flashcards</p>
+        </div>
+        <a href="{{ url_for('syllabus.create') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i>
+            New Syllabus
+        </a>
+    </div>
+
+    {% if syllabi %}
+    <div class="grid grid-3">
+        {% for s in syllabi %}
+        <div class="card">
+            <div class="card-header">
+                <h3>{{ s.name }}</h3>
+            </div>
+            <p class="text-muted mb-3">Created {{ s.created_at }}</p>
+
+            <div class="flex gap-2">
+                <a href="{{ url_for('syllabus.view', syllabus_id=s.id) }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-eye"></i>
+                    View
+                </a>
+                <button class="btn btn-danger btn-sm btn-icon delete-syllabus" data-id="{{ s.id }}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card empty-state">
+        <i class="fas fa-graduation-cap"></i>
+        <h3>No syllabi yet</h3>
+        <p>Upload a syllabus to automatically generate quizzes, flashcards, and a study plan!</p>
+        <a href="{{ url_for('syllabus.create') }}" class="btn btn-primary mt-3">
+            <i class="fas fa-plus"></i>
+            Upload Syllabus
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.querySelectorAll('.delete-syllabus').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        if (confirm('Delete this syllabus?')) {
+            const id = btn.dataset.id;
+            await fetch(`/syllabus/api/syllabus/${id}`, { method: 'DELETE' });
+            location.reload();
+        }
+    });
+});
+</script>
+{% endblock %}
