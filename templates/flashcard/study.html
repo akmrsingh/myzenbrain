@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}Study {{ deck.name }} - MyZenBrain{% endblock %}
+
+{% block content %}
+<div class="flashcard-container fade-in">
+    <h1 class="mb-2">{{ deck.name }}</h1>
+    <p class="text-muted mb-4" id="progress">Loading cards...</p>
+
+    <!-- Flashcard -->
+    <div class="flashcard" id="flashcard" onclick="flipCard()">
+        <div class="flashcard-inner">
+            <div class="flashcard-front">
+                <span id="card-front">Loading...</span>
+            </div>
+            <div class="flashcard-back">
+                <span id="card-back">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+    <p class="text-muted mb-3">Click card to flip</p>
+
+    <!-- Rating Buttons -->
+    <div class="rating-buttons" id="rating-buttons" style="display: none;">
+        <button class="rating-btn again" onclick="rateCard(1)">
+            Again<br><small>1 day</small>
+        </button>
+        <button class="rating-btn hard" onclick="rateCard(2)">
+            Hard<br><small>~3 days</small>
+        </button>
+        <button class="rating-btn good" onclick="rateCard(4)">
+            Good<br><small>~7 days</small>
+        </button>
+        <button class="rating-btn easy" onclick="rateCard(5)">
+            Easy<br><small>~14 days</small>
+        </button>
+    </div>
+
+    <!-- Session Complete -->
+    <div class="card text-center" id="complete-message" style="display: none; max-width: 400px;">
+        <i class="fas fa-check-circle" style="font-size: 4rem; color: var(--success); margin-bottom: 16px;"></i>
+        <h2>Session Complete!</h2>
+        <p class="text-muted">You've reviewed all due cards in this deck.</p>
+        <div class="flex gap-2 flex-center mt-3">
+            <a href="{{ url_for('flashcard.index') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i>
+                Back to Decks
+            </a>
+            <button class="btn btn-primary" onclick="location.reload()">
+                <i class="fas fa-redo"></i>
+                Study Again
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+const deckId = {{ deck.id }};
+let cards = [];
+let currentIndex = 0;
+let isFlipped = false;
+
+async function loadCards() {
+    const res = await fetch(`/flashcard/api/deck/${deckId}/due`);
+    cards = await res.json();
+
+    if (cards.length === 0) {
+        // No due cards, get all cards
+        const allRes = await fetch(`/flashcard/api/deck/${deckId}`);
+        const data = await allRes.json();
+        cards = data.cards;
+    }
+
+    if (cards.length === 0) {
+        document.getElementById('flashcard').style.display = 'none';
+        document.getElementById('complete-message').style.display = 'block';
+        document.querySelector('.text-muted.mb-3').style.display = 'none';
+        return;
+    }
+
+    showCard();
+}
+
+function showCard() {
+    if (currentIndex >= cards.length) {
+        document.getElementById('flashcard').style.display = 'none';
+        document.getElementById('rating-buttons').style.display = 'none';
+        document.getElementById('complete-message').style.display = 'block';
+        document.querySelector('.text-muted.mb-3').style.display = 'none';
+        return;
+    }
+
+    const card = cards[currentIndex];
+    document.getElementById('card-front').textContent = card.front;
+    document.getElementById('card-back').textContent = card.back;
+    document.getElementById('progress').textContent = `Card ${currentIndex + 1} of ${cards.length}`;
+
+    // Reset flip state
+    isFlipped = false;
+    document.getElementById('flashcard').classList.remove('flipped');
+    document.getElementById('rating-buttons').style.display = 'none';
+}
+
+function flipCard() {
+    isFlipped = !isFlipped;
+    document.getElementById('flashcard').classList.toggle('flipped');
+
+    if (isFlipped) {
+        document.getElementById('rating-buttons').style.display = 'flex';
+    }
+}
+
+async function rateCard(quality) {
+    const card = cards[currentIndex];
+
+    await fetch(`/flashcard/api/card/${card.id}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quality })
+    });
+
+    currentIndex++;
+    showCard();
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+        e.preventDefault();
+        flipCard();
+    } else if (isFlipped) {
+        if (e.key === '1') rateCard(1);
+        else if (e.key === '2') rateCard(2);
+        else if (e.key === '3') rateCard(4);
+        else if (e.key === '4') rateCard(5);
+    }
+});
+
+loadCards();
+</script>
+{% endblock %}

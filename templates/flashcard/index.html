@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Flashcards - MyZenBrain{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <div class="flex flex-between mb-4">
+        <h1>Flashcard Decks</h1>
+        <a href="{{ url_for('flashcard.create') }}" class="btn btn-primary">
+            <i class="fas fa-plus"></i>
+            New Deck
+        </a>
+    </div>
+
+    {% if decks %}
+    <div class="grid grid-3">
+        {% for deck in decks %}
+        <div class="card">
+            <div class="card-header">
+                <h3>{{ deck.name }}</h3>
+                {% if deck.due_count > 0 %}
+                <span class="badge badge-warning">{{ deck.due_count }} due</span>
+                {% endif %}
+            </div>
+
+            <p class="text-muted mb-2">{{ deck.description or 'No description' }}</p>
+
+            <div class="flex flex-between mb-3">
+                <span class="text-muted">{{ deck.card_count }} cards</span>
+                {% if deck.subject %}
+                <span class="badge badge-primary">{{ deck.subject }}</span>
+                {% endif %}
+            </div>
+
+            <div class="flex gap-2">
+                {% if deck.card_count > 0 %}
+                <a href="{{ url_for('flashcard.study', deck_id=deck.id) }}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-play"></i>
+                    Study
+                </a>
+                {% endif %}
+                <a href="{{ url_for('flashcard.edit', deck_id=deck.id) }}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-edit"></i>
+                    Edit
+                </a>
+                <button class="btn btn-danger btn-sm btn-icon delete-deck" data-id="{{ deck.id }}">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card empty-state">
+        <i class="fas fa-layer-group"></i>
+        <h3>No decks yet</h3>
+        <p>Create your first flashcard deck to start studying!</p>
+        <a href="{{ url_for('flashcard.create') }}" class="btn btn-primary mt-3">
+            <i class="fas fa-plus"></i>
+            Create Deck
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.querySelectorAll('.delete-deck').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        if (confirm('Delete this deck and all its cards?')) {
+            const id = btn.dataset.id;
+            await fetch(`/flashcard/api/deck/${id}`, { method: 'DELETE' });
+            location.reload();
+        }
+    });
+});
+</script>
+{% endblock %}

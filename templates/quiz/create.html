@@ -1,0 +1,269 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if quiz else 'Create' }} Quiz - MyZenBrain{% endblock %}
+
+{% block content %}
+<div class="fade-in" style="max-width: 800px; margin: 0 auto;">
+    <h1 class="mb-4">{{ 'Edit' if quiz else 'Create' }} Quiz</h1>
+
+    <div class="card mb-4">
+        <div class="form-group">
+            <label>Quiz Title</label>
+            <input type="text" id="quiz-title" class="form-control" value="{{ quiz.title if quiz else '' }}" placeholder="e.g., Biology Chapter 5">
+        </div>
+
+        <div class="form-group">
+            <label>Description</label>
+            <textarea id="quiz-description" class="form-control" placeholder="What is this quiz about?">{{ quiz.description if quiz else '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Subject</label>
+            <input type="text" id="quiz-subject" class="form-control" value="{{ quiz.subject if quiz else '' }}" placeholder="e.g., Biology, Math, History">
+        </div>
+
+        <button class="btn btn-primary" id="save-quiz">
+            <i class="fas fa-save"></i>
+            Save Quiz
+        </button>
+    </div>
+
+    <div id="questions-section" {% if not quiz %}style="display: none;"{% endif %}>
+        <div class="flex flex-between mb-3">
+            <h2>Questions</h2>
+            <button class="btn btn-primary btn-sm" id="add-question-btn">
+                <i class="fas fa-plus"></i>
+                Add Question
+            </button>
+        </div>
+
+        <div id="questions-list">
+            {% if quiz and questions %}
+                {% for q in questions %}
+                <div class="card mb-2 question-item" data-id="{{ q.id }}">
+                    <div class="flex flex-between">
+                        <div>
+                            <strong>Q{{ loop.index }}:</strong> {{ q.question_text }}<br>
+                            <span class="text-muted">Type: {{ q.question_type }} | Answer: {{ q.correct_answer }}</span>
+                        </div>
+                        <div class="item-actions">
+                            <button class="btn btn-secondary btn-icon edit-question">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-danger btn-icon delete-question">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- Add/Edit Question Form -->
+        <div class="card mt-3" id="question-form" style="display: none;">
+            <h3 id="question-form-title">Add New Question</h3>
+            <input type="hidden" id="edit-question-id">
+
+            <div class="form-group">
+                <label>Question Type</label>
+                <select id="question-type" class="form-control">
+                    <option value="multiple_choice">Multiple Choice</option>
+                    <option value="true_false">True/False</option>
+                    <option value="short_answer">Short Answer</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Question</label>
+                <textarea id="question-text" class="form-control" placeholder="Enter your question"></textarea>
+            </div>
+
+            <!-- Multiple Choice Options -->
+            <div id="mc-options">
+                <div class="form-group">
+                    <label>Options (one per line)</label>
+                    <textarea id="question-options" class="form-control" placeholder="Option A&#10;Option B&#10;Option C&#10;Option D"></textarea>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Correct Answer</label>
+                <input type="text" id="correct-answer" class="form-control" placeholder="Enter the correct answer">
+            </div>
+
+            <div class="form-group">
+                <label>Explanation (optional)</label>
+                <textarea id="question-explanation" class="form-control" placeholder="Why is this the correct answer?"></textarea>
+            </div>
+
+            <div class="flex gap-2">
+                <button class="btn btn-primary" id="save-question">
+                    <i class="fas fa-check"></i>
+                    Save Question
+                </button>
+                <button class="btn btn-secondary" id="cancel-question">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let quizId = {{ quiz.id if quiz else 'null' }};
+
+document.getElementById('question-type').addEventListener('change', (e) => {
+    const mcOptions = document.getElementById('mc-options');
+    if (e.target.value === 'multiple_choice') {
+        mcOptions.style.display = 'block';
+    } else {
+        mcOptions.style.display = 'none';
+    }
+
+    if (e.target.value === 'true_false') {
+        document.getElementById('correct-answer').placeholder = 'true or false';
+    } else {
+        document.getElementById('correct-answer').placeholder = 'Enter the correct answer';
+    }
+});
+
+document.getElementById('save-quiz').addEventListener('click', async () => {
+    const data = {
+        title: document.getElementById('quiz-title').value,
+        description: document.getElementById('quiz-description').value,
+        subject: document.getElementById('quiz-subject').value
+    };
+
+    if (!data.title) {
+        alert('Please enter a quiz title');
+        return;
+    }
+
+    let url = '/quiz/api/quiz';
+    let method = 'POST';
+
+    if (quizId) {
+        url = `/quiz/api/quiz/${quizId}`;
+        method = 'PUT';
+    }
+
+    const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+
+    if (result.success || result.id) {
+        if (!quizId) {
+            quizId = result.id;
+        }
+        document.getElementById('questions-section').style.display = 'block';
+        alert('Quiz saved!');
+    }
+});
+
+document.getElementById('add-question-btn').addEventListener('click', () => {
+    document.getElementById('question-form').style.display = 'block';
+    document.getElementById('question-form-title').textContent = 'Add New Question';
+    document.getElementById('edit-question-id').value = '';
+    document.getElementById('question-text').value = '';
+    document.getElementById('question-options').value = '';
+    document.getElementById('correct-answer').value = '';
+    document.getElementById('question-explanation').value = '';
+    document.getElementById('question-type').value = 'multiple_choice';
+    document.getElementById('mc-options').style.display = 'block';
+});
+
+document.getElementById('cancel-question').addEventListener('click', () => {
+    document.getElementById('question-form').style.display = 'none';
+});
+
+document.getElementById('save-question').addEventListener('click', async () => {
+    const questionText = document.getElementById('question-text').value;
+    const questionType = document.getElementById('question-type').value;
+    const correctAnswer = document.getElementById('correct-answer').value;
+    const explanation = document.getElementById('question-explanation').value;
+    const editId = document.getElementById('edit-question-id').value;
+
+    let options = [];
+    if (questionType === 'multiple_choice') {
+        options = document.getElementById('question-options').value.split('\n').filter(o => o.trim());
+    } else if (questionType === 'true_false') {
+        options = ['true', 'false'];
+    }
+
+    if (!questionText || !correctAnswer) {
+        alert('Please fill in the question and answer');
+        return;
+    }
+
+    const data = {
+        question_text: questionText,
+        question_type: questionType,
+        correct_answer: correctAnswer,
+        options: options,
+        explanation: explanation
+    };
+
+    let url, method;
+    if (editId) {
+        url = `/quiz/api/question/${editId}`;
+        method = 'PUT';
+    } else {
+        url = `/quiz/api/quiz/${quizId}/question`;
+        method = 'POST';
+    }
+
+    await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+
+    location.reload();
+});
+
+document.querySelectorAll('.delete-question').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const item = btn.closest('.question-item');
+        const qId = item.dataset.id;
+        if (confirm('Delete this question?')) {
+            await fetch(`/quiz/api/question/${qId}`, { method: 'DELETE' });
+            item.remove();
+        }
+    });
+});
+
+document.querySelectorAll('.edit-question').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const item = btn.closest('.question-item');
+        const qId = item.dataset.id;
+
+        const res = await fetch(`/quiz/api/quiz/${quizId}`);
+        const data = await res.json();
+        const q = data.questions.find(x => x.id == qId);
+
+        if (q) {
+            document.getElementById('question-form').style.display = 'block';
+            document.getElementById('question-form-title').textContent = 'Edit Question';
+            document.getElementById('edit-question-id').value = qId;
+            document.getElementById('question-text').value = q.question_text;
+            document.getElementById('question-type').value = q.question_type;
+            document.getElementById('correct-answer').value = q.correct_answer;
+            document.getElementById('question-explanation').value = q.explanation || '';
+
+            if (q.question_type === 'multiple_choice') {
+                const opts = JSON.parse(q.options || '[]');
+                document.getElementById('question-options').value = opts.join('\n');
+                document.getElementById('mc-options').style.display = 'block';
+            } else {
+                document.getElementById('mc-options').style.display = 'none';
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

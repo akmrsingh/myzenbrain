@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - MyZenBrain{% endblock %}
+
+{% block content %}
+<div class="fade-in">
+    <h1 class="mb-2">Welcome back, {{ session.get('username', 'Student') }}!</h1>
+    <p class="text-muted mb-4">What would you like to study today?</p>
+
+    <!-- Quick Stats -->
+    <div class="grid grid-4 mb-4">
+        <div class="card stat-card">
+            <div class="stat-value">{{ stats.focus_minutes if stats else 0 }}</div>
+            <div class="stat-label">Focus Minutes Today</div>
+        </div>
+        <div class="card stat-card">
+            <div class="stat-value">{{ stats.pomodoro_count if stats else 0 }}</div>
+            <div class="stat-label">Pomodoros Today</div>
+        </div>
+        <div class="card stat-card">
+            <div class="stat-value">{{ stats.cards_reviewed if stats else 0 }}</div>
+            <div class="stat-label">Cards Reviewed</div>
+        </div>
+        <div class="card stat-card">
+            <div class="stat-value">{{ stats.quizzes_taken if stats else 0 }}</div>
+            <div class="stat-label">Quizzes Taken</div>
+        </div>
+    </div>
+
+    <!-- Module Selection -->
+    <h2 class="mb-3">Study Tools</h2>
+    <div class="grid grid-3 mb-4">
+        <a href="{{ url_for('pomodoro.index') }}" class="card module-card pomodoro">
+            <i class="fas fa-clock"></i>
+            <h3>Pomodoro Timer</h3>
+            <p>Focus with timed study sessions</p>
+        </a>
+
+        <a href="{{ url_for('flashcard.index') }}" class="card module-card flashcard">
+            <i class="fas fa-layer-group"></i>
+            <h3>Flashcards</h3>
+            <p>{{ deck_count }} decks {% if due_cards > 0 %}<span class="badge badge-warning">{{ due_cards }} due</span>{% endif %}</p>
+        </a>
+
+        <a href="{{ url_for('quiz.index') }}" class="card module-card quiz">
+            <i class="fas fa-question-circle"></i>
+            <h3>Quizzes</h3>
+            <p>{{ quiz_count }} quizzes available</p>
+        </a>
+    </div>
+
+    {% if due_cards > 0 %}
+    <div class="card" style="border-left: 4px solid var(--flashcard-color);">
+        <h3><i class="fas fa-bell" style="color: var(--flashcard-color);"></i> Review Reminder</h3>
+        <p class="text-muted">You have {{ due_cards }} flashcard(s) due for review today!</p>
+        <a href="{{ url_for('flashcard.index') }}" class="btn btn-sm btn-primary mt-2">
+            Start Review
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

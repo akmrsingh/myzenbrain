@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Pomodoro Timer - MyZenBrain{% endblock %}
+
+{% block content %}
+<div class="timer-container fade-in">
+    <h1 class="mb-4">Pomodoro Timer</h1>
+
+    <!-- Session Type Buttons -->
+    <div class="session-type-btns">
+        <button class="session-type-btn active" data-type="focus">Focus</button>
+        <button class="session-type-btn" data-type="short_break">Short Break</button>
+        <button class="session-type-btn" data-type="long_break">Long Break</button>
+    </div>
+
+    <!-- Timer Display -->
+    <div class="timer-display">
+        <div class="timer-circle">
+            <div class="timer-time" id="timer-display">25:00</div>
+            <div class="timer-label" id="timer-label">Focus Time</div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="timer-controls">
+        <button class="timer-btn secondary" id="reset-btn" title="Reset">
+            <i class="fas fa-redo"></i>
+        </button>
+        <button class="timer-btn primary" id="start-btn">
+            <i class="fas fa-play"></i>
+        </button>
+        <button class="timer-btn secondary" id="skip-btn" title="Skip">
+            <i class="fas fa-forward"></i>
+        </button>
+    </div>
+
+    <!-- Session Counter -->
+    <div class="card" style="text-align: center; margin-top: 24px;">
+        <p class="text-muted">Sessions completed today</p>
+        <h2 id="session-count">0</h2>
+    </div>
+
+    <!-- Settings Toggle -->
+    <button class="btn btn-secondary mt-3" id="settings-toggle">
+        <i class="fas fa-cog"></i>
+        Settings
+    </button>
+
+    <!-- Settings Panel -->
+    <div class="card mt-3" id="settings-panel" style="display: none; max-width: 400px;">
+        <h3 class="mb-3">Timer Settings</h3>
+
+        <div class="form-group">
+            <label>Focus Duration (minutes)</label>
+            <input type="number" id="focus-duration" class="form-control" min="1" max="60" value="25">
+        </div>
+
+        <div class="form-group">
+            <label>Short Break (minutes)</label>
+            <input type="number" id="short-break-duration" class="form-control" min="1" max="30" value="5">
+        </div>
+
+        <div class="form-group">
+            <label>Long Break (minutes)</label>
+            <input type="number" id="long-break-duration" class="form-control" min="1" max="60" value="15">
+        </div>
+
+        <div class="form-group">
+            <label>Sessions until Long Break</label>
+            <input type="number" id="sessions-until-long" class="form-control" min="2" max="10" value="4">
+        </div>
+
+        <button class="btn btn-primary" id="save-settings">Save Settings</button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/pomodoro.js') }}"></script>
+{% endblock %}

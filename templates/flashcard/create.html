@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if deck else 'Create' }} Deck - MyZenBrain{% endblock %}
+
+{% block content %}
+<div class="fade-in" style="max-width: 800px; margin: 0 auto;">
+    <h1 class="mb-4">{{ 'Edit' if deck else 'Create' }} Flashcard Deck</h1>
+
+    <div class="card mb-4">
+        <div class="form-group">
+            <label>Deck Name</label>
+            <input type="text" id="deck-name" class="form-control" value="{{ deck.name if deck else '' }}" placeholder="e.g., Spanish Vocabulary">
+        </div>
+
+        <div class="form-group">
+            <label>Description</label>
+            <textarea id="deck-description" class="form-control" placeholder="What is this deck about?">{{ deck.description if deck else '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label>Subject</label>
+            <input type="text" id="deck-subject" class="form-control" value="{{ deck.subject if deck else '' }}" placeholder="e.g., Language, Science, History">
+        </div>
+
+        <button class="btn btn-primary" id="save-deck">
+            <i class="fas fa-save"></i>
+            Save Deck
+        </button>
+    </div>
+
+    <div id="cards-section" {% if not deck %}style="display: none;"{% endif %}>
+        <div class="flex flex-between mb-3">
+            <h2>Cards</h2>
+            <button class="btn btn-primary btn-sm" id="add-card-btn">
+                <i class="fas fa-plus"></i>
+                Add Card
+            </button>
+        </div>
+
+        <div id="cards-list">
+            {% if deck and cards %}
+                {% for card in cards %}
+                <div class="card mb-2 card-item" data-id="{{ card.id }}">
+                    <div class="flex flex-between">
+                        <div style="flex: 1;">
+                            <strong>Front:</strong> {{ card.front }}<br>
+                            <span class="text-muted"><strong>Back:</strong> {{ card.back }}</span>
+                        </div>
+                        <div class="item-actions">
+                            <button class="btn btn-secondary btn-icon edit-card">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-danger btn-icon delete-card">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+
+        <!-- Add/Edit Card Modal -->
+        <div class="card mt-3" id="card-form" style="display: none;">
+            <h3 id="card-form-title">Add New Card</h3>
+            <input type="hidden" id="edit-card-id">
+
+            <div class="form-group">
+                <label>Front (Question/Term)</label>
+                <textarea id="card-front" class="form-control" placeholder="Enter the question or term"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Back (Answer/Definition)</label>
+                <textarea id="card-back" class="form-control" placeholder="Enter the answer or definition"></textarea>
+            </div>
+
+            <div class="flex gap-2">
+                <button class="btn btn-primary" id="save-card">
+                    <i class="fas fa-check"></i>
+                    Save Card
+                </button>
+                <button class="btn btn-secondary" id="cancel-card">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let deckId = {{ deck.id if deck else 'null' }};
+
+document.getElementById('save-deck').addEventListener('click', async () => {
+    const data = {
+        name: document.getElementById('deck-name').value,
+        description: document.getElementById('deck-description').value,
+        subject: document.getElementById('deck-subject').value
+    };
+
+    if (!data.name) {
+        alert('Please enter a deck name');
+        return;
+    }
+
+    let url = '/flashcard/api/deck';
+    let method = 'POST';
+
+    if (deckId) {
+        url = `/flashcard/api/deck/${deckId}`;
+        method = 'PUT';
+    }
+
+    const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+
+    if (result.success || result.id) {
+        if (!deckId) {
+            deckId = result.id;
+        }
+        document.getElementById('cards-section').style.display = 'block';
+        alert('Deck saved!');
+    }
+});
+
+document.getElementById('add-card-btn').addEventListener('click', () => {
+    document.getElementById('card-form').style.display = 'block';
+    document.getElementById('card-form-title').textContent = 'Add New Card';
+    document.getElementById('edit-card-id').value = '';
+    document.getElementById('card-front').value = '';
+    document.getElementById('card-back').value = '';
+});
+
+document.getElementById('cancel-card').addEventListener('click', () => {
+    document.getElementById('card-form').style.display = 'none';
+});
+
+document.getElementById('save-card').addEventListener('click', async () => {
+    const front = document.getElementById('card-front').value;
+    const back = document.getElementById('card-back').value;
+    const editId = document.getElementById('edit-card-id').value;
+
+    if (!front || !back) {
+        alert('Please fill in both sides of the card');
+        return;
+    }
+
+    let url, method;
+    if (editId) {
+        url = `/flashcard/api/card/${editId}`;
+        method = 'PUT';
+    } else {
+        url = `/flashcard/api/deck/${deckId}/card`;
+        method = 'POST';
+    }
+
+    await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ front, back })
+    });
+
+    location.reload();
+});
+
+document.querySelectorAll('.delete-card').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const cardItem = btn.closest('.card-item');
+        const cardId = cardItem.dataset.id;
+        if (confirm('Delete this card?')) {
+            await fetch(`/flashcard/api/card/${cardId}`, { method: 'DELETE' });
+            cardItem.remove();
+        }
+    });
+});
+
+document.querySelectorAll('.edit-card').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const cardItem = btn.closest('.card-item');
+        const cardId = cardItem.dataset.id;
+
+        const res = await fetch(`/flashcard/api/deck/${deckId}`);
+        const data = await res.json();
+        const card = data.cards.find(c => c.id == cardId);
+
+        if (card) {
+            document.getElementById('card-form').style.display = 'block';
+            document.getElementById('card-form-title').textContent = 'Edit Card';
+            document.getElementById('edit-card-id').value = cardId;
+            document.getElementById('card-front').value = card.front;
+            document.getElementById('card-back').value = card.back;
+        }
+    });
+});
+</script>
+{% endblock %}
