@@ -51,10 +51,20 @@ def edit(quiz_id):
 def take(quiz_id):
     db = get_db()
     quiz = db.execute('SELECT * FROM quizzes WHERE id = ?', (quiz_id,)).fetchone()
-    questions = db.execute(
+    questions_raw = db.execute(
         'SELECT * FROM quiz_questions WHERE quiz_id = ? ORDER BY order_num',
         (quiz_id,)
     ).fetchall()
+
+    # Parse options JSON for each question
+    questions = []
+    for q in questions_raw:
+        q_dict = dict(q)
+        try:
+            q_dict['options_list'] = json.loads(q['options']) if q['options'] else []
+        except:
+            q_dict['options_list'] = []
+        questions.append(q_dict)
 
     return render_template('quiz/take.html', quiz=quiz, questions=questions)
 
